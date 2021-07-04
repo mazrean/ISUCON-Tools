@@ -1,7 +1,7 @@
 SHELL=/bin/bash
-CONTEST:=isucon10
-TEAM:=NEMEX
-MEMBER_GITHUB:=mazrean ntaso2051 Fogrexon
+CONTEST:=isucon10-local
+TEAM:=mazrean
+MEMBER_GITHUB:=mazrean
 
 GIT_MAIL:="~"#誰かのgitのメールアドレス
 GIT_NAME:="~"#誰かのgitの名前
@@ -32,11 +32,13 @@ SLACKRAW:=slackcat --channel
 
 CONTEST_CHAN:=$(CONTEST)
 PPROF_CHAN:=pprof
+FGPROF_CHAN:=pprof
 KTARU_CHAN:=kataribe
 SLOW_CHAN:=query-log
 LOG_CHAN:=log
 OTHER_CHAN:=other
 
+FGPROF:=go tool pprof -png -output fgprof.png http://localhost:6060/debug/fgprof
 PPROF:=go tool pprof -png -output pprof.png http://localhost:6060/debug/pprof/profile
 DUMP:=curl -s "http://localhost:6060/debug/pprof/goroutine?debug=1"
 DSTAT:=dstat -tlnr --top-cpu --top-mem --top-io --top-bio
@@ -124,6 +126,11 @@ kataru:
 pprof:
 	$(PPROF)
 	$(SLACKRAW) $(PPROF_CHAN) -n pprof.png ./pprof.png
+
+.PHONY: fgprof
+fgprof:
+	$(FGPROF)
+	$(SLACKRAW) $(FGPROF_CHAN) -n fgprof.png ./fgprof.png
 
 .PHONY: dump
 dump:
