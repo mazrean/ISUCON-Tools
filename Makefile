@@ -66,7 +66,7 @@ restart:
 	sudo systemctl restart $(CTL_NAME).service
 
 .PHONY: dev
-dev: build 
+dev: build
 	cd $(BUILD_DIR); \
 	./$(BIN_NAME)
 
@@ -77,7 +77,7 @@ bench-dev: pull before slow-on dev
 bench: pull before slow-on build restart log
 
 .PHONY: log
-log: 
+log:
 	sudo journalctl -u $(CTL_NAME) -n10 -f | $(SLACKCAT) $(LOG_CHAN)
 
 .PHONY: maji
@@ -93,6 +93,7 @@ pull:
 
 .PHONY: before
 before:
+	# backup logs
 	$(eval when := $(shell date "+%s"))
 	mkdir -p ~/logs/$(when)
 	@if [ -f $(NGX_LOG) ]; then \
@@ -101,11 +102,13 @@ before:
 	@if [ -f $(MYSQL_LOG) ]; then \
 		sudo mv -f $(MYSQL_LOG) ~/logs/$(when)/ ; \
 	fi
+	# backup configs
 	mkdir -p ~/config/$(when)
 	sudo mv -f $(NGX_CFG) ~/config/$(when)/ ; \
 	sudo cp nginx.conf $(NGX_CFG)
 	sudo mv -f $(MYSQL_CFG) ~/config/$(when)/ ; \
 	sudo cp sql.conf $(MYSQL_CFG)
+	# restart
 	sudo systemctl restart nginx
 	sudo systemctl restart mysql
 
@@ -140,11 +143,19 @@ slow-off:
 	# sudo mysql -e "set global slow_query_log = OFF;"
 	sudo $(MYSQL_CMD) -e "set global slow_query_log = OFF;"
 
+.PHONY: setup
+setup: apt-setup git-setup repository-setup ssh-setup tools-setup
+
+.PHONY: set
+set: apt-setup git-setup repository-backup repository-clone ssh-setup tools-setup
+
+.PHONY: apt-setup
 apt-setup:
 	sudo apt update
 	sudo apt install -y git openssh-server
 	sudo apt upgrade git openssh-server
 
+.PHONY: git-setup
 git-setup:
 	git config --global user.email $(GIT_MAIL)
 	git config --global user.name $(GIT_NAME)
@@ -153,6 +164,7 @@ git-setup:
 	# 公開鍵をgithubに登録するのを待機
 	read hoge
 
+.PHONY: repository-setup
 repository-setup:
 	git init
 	git commit --allow-empty -m "initial commit"
@@ -161,39 +173,42 @@ repository-setup:
 	git commit -m "init"
 	git push origin master
 
+.PHONY: repository-backup
 repository-backup:
 	mkdir ~/project-backup
 	mv $(PROJECT_ROOT) ~/project-backup/
 
+.PHONY: repository-clone
 repository-clone:
 	git clone $(GIT_REPO) $(PROJECT_ROOT)
 
+.PHONY: ssh-setup
 ssh-setup:
-	# members="$(MEMBER_GITHUB)";\
+	members="$(MEMBER_GITHUB)";\
 	for member in $$members; do\
 		curl https://github.com/$$member.keys >> ~/.ssh/authorized_keys;\
 	done
 
+.PHONY: tools-setup
 tools-setup:
+	# apt tools
 	sudo apt upgrade
-	sudo apt install -y percona-toolkit dstat  unzip snapd graphviz gv htop
+	sudo apt install -y percona-toolkit dstat unzip snapd graphviz gv htop
+	# kataribe
 	wget https://github.com/matsuu/kataribe/releases/download/v0.4.1/kataribe-v0.4.1_linux_amd64.zip -O kataribe.zip
 	unzip -o kataribe.zip
 	sudo mv kataribe /usr/local/bin/
 	sudo chmod +x /usr/local/bin/kataribe
 	rm kataribe.zip
 	kataribe -generate
+	# myprofiler
 	wget https://github.com/KLab/myprofiler/releases/download/0.2/myprofiler.linux_amd64.tar.gz
 	tar -xf myprofiler.linux_amd64.tar.gz
 	rm myprofiler.linux_amd64.tar.gz
 	sudo mv myprofiler /usr/local/bin/
 	sudo chmod +x /usr/local/bin/myprofiler
+	# slackcat
+	wget https://github.com/bcicen/slackcat/releases/download/v1.5/slackcat-1.5-linux-amd64 -O slackcat
 	sudo mv slackcat /usr/local/bin/
 	sudo chmod +x /usr/local/bin/slackcat
 	slackcat --configure
-
-.PHONY: setup
-setup: apt-setup git-setup repository-setup ssh-setup tools-setup
-
-.PHONY: set
-set: apt-setup git-setup repository-backup repository-clone ssh-setup tools-setup
