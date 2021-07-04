@@ -91,7 +91,7 @@ anal: slow kataru
 .PHONY: commit
 pull:
 	cd $(PROJECT_ROOT); \
-	git pull origin master
+	git pull origin main
 
 .PHONY: before
 before:
@@ -173,12 +173,13 @@ git-setup:
 
 .PHONY: repository-setup
 repository-setup:
-	git init
-	git commit --allow-empty -m "initial commit"
-	git remote add origin $(GIT_REPO)
-	git add .
-	git commit -m "init"
-	git push origin master
+	cd $(PROJECT_ROOT);\
+	git init;\
+	git commit --allow-empty -m "initial commit";\
+	git remote add origin $(GIT_REPO);\
+	git add .;\
+	git commit -m "init";\
+	git push origin main
 
 .PHONY: repository-backup
 repository-backup:
