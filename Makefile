@@ -1,6 +1,3 @@
-
-export GO111MODULE=on
-
 SHELL=/bin/bash
 CONTEST:=isucon10
 TEAM:=NEMEX
@@ -25,7 +22,6 @@ MYSQL_CMD:=mysql -h$(DB_HOST) -P$(DB_PORT) -u$(DB_USER) -p$(DB_PASS) $(DB_NAME)
 
 NGX_LOG:=~
 MYSQL_LOG:=~
-GOR_LOG:=/tmp/replay.log
 
 KATARU_CFG:=./kataribe.toml
 NGX_CFG:=~#nginxの設定ファイル
@@ -49,8 +45,6 @@ PROJECT_ROOT:=~#gitリポジトリのディレクトリ
 BUILD_DIR:=~#build対象のファイルがある場所
 BIN_NAME:=~#build後のファイルの名前
 
-CA:=-o /dev/null -s -w "%{http_code}\n"
-
 all: build
 
 .PHONY: clean
@@ -71,19 +65,10 @@ build:
 restart:
 	sudo systemctl restart $(CTL_NAME).service
 
-.PHONY: test
-test:
-	curl localhost $(CA)
-	sudo ./gor --input-file $(GOR_LOG) --output-http="http://localhost:$(APP_PORT)"
-
-# ここから元から作ってるやつ
 .PHONY: dev
 dev: build 
 	cd $(BUILD_DIR); \
 	./$(BIN_NAME)
-
-.PHONY: bench-rc
-bench-rec: commit before slow-on dev rec
 
 .PHONY: bench-dev
 bench-dev: pull before slow-on dev
@@ -100,13 +85,6 @@ maji: pull before slow-off build restart
 
 .PHONY: anal
 anal: slow kataru
-
-.PHONY: rec
-rec:
-	@if [ -f $(GOR_LOG) ]; then \
-		sudo mv -f $(GOR_LOG) ~/logs/$(when)/ ; \
-	fi
-	sudo ./gor --input-raw :80 --output-file=$(GOR_LOG) --output-http="http://localhost:$(APP_PORT)"
 
 .PHONY: commit
 pull:
@@ -162,26 +140,41 @@ slow-off:
 	# sudo mysql -e "set global slow_query_log = OFF;"
 	sudo $(MYSQL_CMD) -e "set global slow_query_log = OFF;"
 
-.PHONY: setup
-setup:
+apt-setup:
 	sudo apt update
 	sudo apt install -y git openssh-server
 	sudo apt upgrade git openssh-server
+
+git-setup:
 	git config --global user.email $(GIT_MAIL)
 	git config --global user.name $(GIT_NAME)
 	ssh-keygen -t ed25519 -C $(GIT_MAIL)
 	cat ~/.ssh/id_ed25519.pub
+	# 公開鍵をgithubに登録するのを待機
 	read hoge
+
+repository-setup:
 	git init
 	git commit --allow-empty -m "initial commit"
 	git remote add origin $(GIT_REPO)
 	git add .
 	git commit -m "init"
 	git push origin master
+
+repository-backup:
+	mkdir ~/project-backup
+	mv $(PROJECT_ROOT) ~/project-backup/
+
+repository-clone:
+	git clone $(GIT_REPO) $(PROJECT_ROOT)
+
+ssh-setup:
 	# members="$(MEMBER_GITHUB)";\
 	for member in $$members; do\
-	 curl https://github.com/$$member.keys >> ~/.ssh/authorized_keys;\
+		curl https://github.com/$$member.keys >> ~/.ssh/authorized_keys;\
 	done
+
+tools-setup:
 	sudo apt upgrade
 	sudo apt install -y percona-toolkit dstat  unzip snapd graphviz gv htop
 	wget https://github.com/matsuu/kataribe/releases/download/v0.4.1/kataribe-v0.4.1_linux_amd64.zip -O kataribe.zip
@@ -195,54 +188,12 @@ setup:
 	rm myprofiler.linux_amd64.tar.gz
 	sudo mv myprofiler /usr/local/bin/
 	sudo chmod +x /usr/local/bin/myprofiler
-	wget https://github.com/buger/goreplay/releases/download/v1.1.0/gor_1.1.0_x64.tar.gz
-	tar -xf gor_1.1.0_x64.tar.gz
-	sudo mv gor /usr/local/bin/
-	rm gor_1.1.0_x64.tar.gz
-	wget https://github.com/bcicen/slackcat/releases/download/v1.5/slackcat-1.5-linux-amd64 -O slackcat
 	sudo mv slackcat /usr/local/bin/
 	sudo chmod +x /usr/local/bin/slackcat
 	slackcat --configure
 
+.PHONY: setup
+setup: apt-setup git-setup repository-setup ssh-setup tools-setup
+
 .PHONY: set
-set:
-	sudo apt update
-	sudo apt install -y git openssh-server
-	sudo apt upgrade git openssh-server
-	git config --global user.email $(GIT_MAIL)
-	git config --global user.name $(GIT_NAME)
-	ssh-keygen -t ed25519 -C $(GIT_MAIL)
-	cat ~/.ssh/id_ed25519.pub
-	read hoge
-	mkdir ~/hogehoge
-	mv $(PROJECT_ROOT) ~/hogehoge/
-	mkdir $(PROJECT_ROOT)
-	cd $(PROJECT_ROOT)
-	git init
-	git remote add origin $(GIT_REPO)
-	git pull origin master
-	# members="$(MEMBER_GITHUB)";\
-	for member in $$members; do\
-	 curl https://github.com/$$member.keys >> ~/.ssh/authorized_keys;\
-	done
-	sudo apt upgrade
-	sudo apt install -y percona-toolkit dstat  unzip snapd graphviz gv htop
-	wget https://github.com/matsuu/kataribe/releases/download/v0.4.1/kataribe-v0.4.1_linux_amd64.zip -O kataribe.zip
-	unzip -o kataribe.zip
-	sudo mv kataribe /usr/local/bin/
-	sudo chmod +x /usr/local/bin/kataribe
-	rm kataribe.zip
-	kataribe -generate
-	wget https://github.com/KLab/myprofiler/releases/download/0.2/myprofiler.linux_amd64.tar.gz
-	tar -xf myprofiler.linux_amd64.tar.gz
-	rm myprofiler.linux_amd64.tar.gz
-	sudo mv myprofiler /usr/local/bin/
-	sudo chmod +x /usr/local/bin/myprofiler
-	wget https://github.com/buger/goreplay/releases/download/v1.1.0/gor_1.1.0_x64.tar.gz
-	tar -xf gor_1.1.0_x64.tar.gz
-	sudo mv gor /usr/local/bin/
-	rm gor_1.1.0_x64.tar.gz
-	wget https://github.com/bcicen/slackcat/releases/download/v1.5/slackcat-1.5-linux-amd64 -O slackcat
-	sudo mv slackcat /usr/local/bin/
-	sudo chmod +x /usr/local/bin/slackcat
-	slackcat --configure
+set: apt-setup git-setup repository-backup repository-clone ssh-setup tools-setup
