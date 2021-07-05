@@ -1,51 +1,26 @@
+include .make.env
+
 SHELL=/bin/bash
 CONTEST:=isucon10-local
 TEAM:=mazrean
 MEMBER_GITHUB:=mazrean
 
-GIT_MAIL:="~"#誰かのgitのメールアドレス
-GIT_NAME:="~"#誰かのgitの名前
 GIT_CONTEST:=$(CONTEST)
 GIT_REPO:="git@github.com:$(TEAM)/$(CONTEST).git"
 
 APP_PORT:=8080
 
-DB_HOST:=127.0.0.1#DBのIPアドレス。サーバー分けたときとかに書き換える。
-DB_PORT:=3306#DBのポート番号。3306でなければ書き換える。
-DB_USER:=~#DBのユーザー名を入れる
-DB_PASS:=~#DBのパスワードを入れる
-DB_NAME:=~#DBのデータベースの名前を入れる。 
-
-CTL_NAME:=~#systemdのサービス名。
-
 MYSQL_CMD:=mysql -h$(DB_HOST) -P$(DB_PORT) -u$(DB_USER) -p$(DB_PASS) $(DB_NAME)
-
-NGX_LOG:=~
-MYSQL_LOG:=~
-
-KATARU_CFG:=./kataribe.toml
-NGX_CFG:=~#nginxの設定ファイル
-MYSQL_CFG:=~#mysqlの設定ファイル
 
 SLACKCAT:=slackcat --tee --channel
 SLACKRAW:=slackcat --channel
 
 CONTEST_CHAN:=$(CONTEST)
-PPROF_CHAN:=pprof
-FGPROF_CHAN:=pprof
-KTARU_CHAN:=kataribe
-SLOW_CHAN:=query-log
-LOG_CHAN:=log
-OTHER_CHAN:=other
 
 FGPROF:=go tool pprof -png -output fgprof.png http://localhost:6060/debug/fgprof
 PPROF:=go tool pprof -png -output pprof.png http://localhost:6060/debug/pprof/profile
 DUMP:=curl -s "http://localhost:6060/debug/pprof/goroutine?debug=1"
 DSTAT:=dstat -tlnr --top-cpu --top-mem --top-io --top-bio
-
-PROJECT_ROOT:=~#gitリポジトリのディレクトリ
-BUILD_DIR:=~#build対象のファイルがある場所
-BIN_NAME:=~#build後のファイルの名前
 
 all: build
 
@@ -152,11 +127,14 @@ slow-off:
 	# sudo mysql -e "set global slow_query_log = OFF;"
 	sudo $(MYSQL_CMD) -e "set global slow_query_log = OFF;"
 
+.make.env:
+	wget https://raw.githubusercontent.com/mazrean/ISUCON-Tools/main/.make.env.template -O .make.env
+
 .PHONY: setup
-setup: apt-setup git-setup config-setup repository-setup ssh-setup tools-setup
+setup: .make.env apt-setup git-setup config-setup repository-setup ssh-setup tools-setup
 
 .PHONY: set
-set: apt-setup git-setup repository-backup repository-clone ssh-setup tools-setup
+set: .make.env apt-setup git-setup repository-backup repository-clone ssh-setup tools-setup
 
 .PHONY: apt-setup
 apt-setup:
