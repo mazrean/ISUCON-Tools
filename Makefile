@@ -107,8 +107,10 @@ before:
 	# backup configs
 	mkdir -p ~/config/$(when)
 	sudo mv -f $(NGX_CFG) ~/config/$(when)/ ; \
-	sudo cp nginx.conf $(NGX_CFG)
 	sudo mv -f $(MYSQL_CFG) ~/config/$(when)/ ; \
+	# set configs
+	cd $(PROJECT_ROOT); \
+	sudo cp nginx.conf $(NGX_CFG);\
 	sudo cp sql.conf $(MYSQL_CFG)
 	# restart
 	sudo systemctl restart nginx
@@ -151,7 +153,7 @@ slow-off:
 	sudo $(MYSQL_CMD) -e "set global slow_query_log = OFF;"
 
 .PHONY: setup
-setup: apt-setup git-setup repository-setup ssh-setup tools-setup
+setup: apt-setup git-setup config-setup repository-setup ssh-setup tools-setup
 
 .PHONY: set
 set: apt-setup git-setup repository-backup repository-clone ssh-setup tools-setup
@@ -177,6 +179,7 @@ repository-setup:
 	git init;\
 	git commit --allow-empty -m "initial commit";\
 	git remote add origin $(GIT_REPO);\
+	git branch -M main;\
 	git add .;\
 	git commit -m "init";\
 	git push origin main
@@ -197,6 +200,12 @@ ssh-setup:
 		curl https://github.com/$$member.keys >> ~/.ssh/authorized_keys;\
 	done
 
+.PHONY: config-setup
+config-setup:
+	cd $(PROJECT_ROOT);\
+	cp $(NGX_CFG) ./nginx.conf;\
+	cp $(MYSQL_CFG) ./sql.conf
+
 .PHONY: tools-setup
 tools-setup:
 	# apt tools
@@ -216,7 +225,7 @@ tools-setup:
 	sudo mv myprofiler /usr/local/bin/
 	sudo chmod +x /usr/local/bin/myprofiler
 	# slackcat
-	wget https://github.com/bcicen/slackcat/releases/download/v1.5/slackcat-1.5-linux-amd64 -O slackcat
+	wget https://github.com/bcicen/slackcat/releases/download/1.7.2/slackcat-1.7.2-linux-amd64 -O slackcat
 	sudo mv slackcat /usr/local/bin/
 	sudo chmod +x /usr/local/bin/slackcat
 	slackcat --configure
