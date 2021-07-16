@@ -164,8 +164,9 @@ repository-setup:
 
 .PHONY: repository-backup
 repository-backup:
-	mkdir ~/project-backup
+	-mkdir ~/project-backup
 	mv $(PROJECT_ROOT) ~/project-backup/
+	cp -rn ~/project-backup/ $(PROJECT_ROOT)
 
 .PHONY: repository-clone
 repository-clone:
@@ -188,7 +189,7 @@ config-setup:
 tools-setup:
 	# apt tools
 	sudo apt upgrade
-	sudo apt install -y percona-toolkit dstat unzip snapd graphviz gv htop
+	sudo apt install -y percona-toolkit dstat unzip graphviz gv htop
 	# kataribe
 	wget https://github.com/matsuu/kataribe/releases/download/v0.4.1/kataribe-v0.4.1_linux_amd64.zip -O kataribe.zip
 	unzip -o kataribe.zip
@@ -202,6 +203,9 @@ tools-setup:
 	rm myprofiler.linux_amd64.tar.gz
 	sudo mv myprofiler /usr/local/bin/
 	sudo chmod +x /usr/local/bin/myprofiler
+	# netdata
+	bash <(curl -Ss https://my-netdata.io/kickstart.sh)
+	sudo systemctl start netdata
 	# slackcat
 	wget https://github.com/bcicen/slackcat/releases/download/1.7.2/slackcat-1.7.2-linux-amd64 -O slackcat
 	sudo mv slackcat /usr/local/bin/
